@@ -14,6 +14,8 @@ import '../../features/home/screens/event_details_screen.dart';
 import '../../features/home/screens/transactions_screen.dart';
 import '../../features/home/screens/edit_profile_screen.dart';
 import '../../features/home/screens/profile_screen.dart';
+import '../../features/venue/screens/my_venues_screen.dart';
+import '../../features/venue/screens/create_venue_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/',
@@ -53,6 +55,14 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/create-event',
       builder: (context, state) => const CreateEventScreen(),
+    ),
+    GoRoute(
+      path: '/my-venues',
+      builder: (context, state) => const MyVenuesScreen(),
+    ),
+    GoRoute(
+      path: '/create-venue',
+      builder: (context, state) => const CreateVenueScreen(),
     ),
     GoRoute(
       path: '/event-details/:eventId',

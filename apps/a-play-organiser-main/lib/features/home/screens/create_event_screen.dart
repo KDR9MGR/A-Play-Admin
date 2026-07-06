@@ -91,8 +91,17 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final clubs = ref.watch(clubsProvider);
-    
+    final authState = ref.watch(authControllerProvider);
+    final userId = authState.maybeWhen(
+      authenticated: (user) => user.id,
+      orElse: () => null,
+    );
+    // Only the organizer's own venues are selectable here, so events can't be
+    // published under a venue someone else owns.
+    final clubs = userId != null
+        ? ref.watch(myClubsProvider(userId))
+        : const AsyncValue<List<Club>>.data([]);
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundDark,
       appBar: AppBar(
@@ -751,7 +760,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           startDate: _startDate!,
           endDate: _endDate!,
           coverImage: _coverImageUrl,
-          createdBy: userId,
         );
 
         result.fold(

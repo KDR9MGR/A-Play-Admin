@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fpdart/fpdart.dart' hide State;
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/utils/app_failure.dart';
 
 class ImagePickerWidget extends StatefulWidget {
   final String? initialImageUrl;
   final ValueChanged<String?> onImageChanged;
   final String label;
   final String hint;
+  final Future<Either<AppFailure, String>> Function() uploadFunction;
 
   const ImagePickerWidget({
     super.key,
@@ -16,6 +19,7 @@ class ImagePickerWidget extends StatefulWidget {
     required this.onImageChanged,
     this.label = 'Cover Image',
     this.hint = 'Tap to select image',
+    this.uploadFunction = StorageService.pickAndUploadEventImage,
   });
 
   @override
@@ -215,7 +219,7 @@ class _ImagePickerWidgetState extends State<ImagePickerWidget> {
     });
 
     try {
-      final result = await StorageService.pickAndUploadEventImage();
+      final result = await widget.uploadFunction();
       
       result.fold(
         (failure) {

@@ -9,37 +9,35 @@ import '../models/event.dart';
 class HomeService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  Event _mapEvent(Map<String, dynamic> data) {
+    return Event.fromJson({
+      'id': data['id'],
+      'title': data['title'],
+      'description': data['description'],
+      'coverImage': data['cover_image'],
+      'startDate': data['start_date'],
+      'endDate': data['end_date'] ?? data['start_date'],
+      'venueId': data['club_id'],
+      'category': data['category'],
+      'capacity': data['capacity'],
+      'price': (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
+      'status': data['status'] ?? 'draft',
+      'featuredImage': data['cover_image'],
+      'organizerId': data['created_by'],
+      'createdAt': data['created_at'],
+      'updatedAt': data['updated_at'],
+      'createdBy': data['created_by'],
+    });
+  }
+
   Future<Either<AppFailure, List<Event>>> getEvents() async {
     try {
       final response = await _supabase
           .from('events')
           .select()
-          .order('event_date', ascending: true);
+          .order('start_date', ascending: true);
 
-      final events = response.map<Event>((data) {
-        return Event.fromJson({
-          'id': data['id'],
-          'title': data['title'],
-          'description': data['description'],
-          'coverImage': data['featured_image'],
-          'startDate': data['event_date'],
-          'endDate': data['end_date'] ?? data['event_date'],
-          'venueId': data['venue_id'],
-          'category': data['category'],
-          'eventType': data['event_type'],
-          'capacity': data['capacity'],
-          'price': (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
-          'vipPrice': (data['vip_price'] as num?)?.toDouble(),
-          'earlyBirdPrice': (data['early_bird_price'] as num?)?.toDouble(),
-          'status': data['status'] ?? 'draft',
-          'featuredImage': data['featured_image'],
-          'images': (data['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
-          'organizerId': data['organizer_id'],
-          'createdAt': data['created_at'],
-          'updatedAt': data['updated_at'],
-          'createdBy': data['organizer_id'],
-        });
-      }).toList();
+      final events = response.map<Event>(_mapEvent).toList();
 
       return Right(events);
     } on PostgrestException catch (e) {
@@ -56,33 +54,10 @@ class HomeService {
       final response = await _supabase
           .from('events')
           .select()
-          .eq('organizer_id', userId)
-          .order('event_date', ascending: true);
+          .eq('created_by', userId)
+          .order('start_date', ascending: true);
 
-      final events = response.map<Event>((data) {
-        return Event.fromJson({
-          'id': data['id'],
-          'title': data['title'],
-          'description': data['description'],
-          'coverImage': data['featured_image'],
-          'startDate': data['event_date'],
-          'endDate': data['end_date'] ?? data['event_date'],
-          'venueId': data['venue_id'],
-          'category': data['category'],
-          'eventType': data['event_type'],
-          'capacity': data['capacity'],
-          'price': (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
-          'vipPrice': (data['vip_price'] as num?)?.toDouble(),
-          'earlyBirdPrice': (data['early_bird_price'] as num?)?.toDouble(),
-          'status': data['status'] ?? 'draft',
-          'featuredImage': data['featured_image'],
-          'images': (data['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
-          'organizerId': data['organizer_id'],
-          'createdAt': data['created_at'],
-          'updatedAt': data['updated_at'],
-          'createdBy': data['organizer_id'],
-        });
-      }).toList();
+      final events = response.map<Event>(_mapEvent).toList();
 
       return Right(events);
     } catch (e) {
@@ -96,35 +71,12 @@ class HomeService {
       final response = await _supabase
           .from('events')
           .select()
-          .eq('organizer_id', userId)
-          .gte('event_date', now)
-          .order('event_date', ascending: true)
+          .eq('created_by', userId)
+          .gte('start_date', now)
+          .order('start_date', ascending: true)
           .limit(10);
 
-      final events = response.map<Event>((data) {
-        return Event.fromJson({
-          'id': data['id'],
-          'title': data['title'],
-          'description': data['description'],
-          'coverImage': data['featured_image'],
-          'startDate': data['event_date'],
-          'endDate': data['end_date'] ?? data['event_date'],
-          'venueId': data['venue_id'],
-          'category': data['category'],
-          'eventType': data['event_type'],
-          'capacity': data['capacity'],
-          'price': (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
-          'vipPrice': (data['vip_price'] as num?)?.toDouble(),
-          'earlyBirdPrice': (data['early_bird_price'] as num?)?.toDouble(),
-          'status': data['status'] ?? 'draft',
-          'featuredImage': data['featured_image'],
-          'images': (data['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
-          'organizerId': data['organizer_id'],
-          'createdAt': data['created_at'],
-          'updatedAt': data['updated_at'],
-          'createdBy': data['organizer_id'],
-        });
-      }).toList();
+      final events = response.map<Event>(_mapEvent).toList();
 
       return Right(events);
     } catch (e) {
@@ -137,9 +89,9 @@ class HomeService {
   Future<Either<AppFailure, List<Club>>> getClubs() async {
     try {
       final response = await _supabase
-          .from('venues')
+          .from('clubs')
           .select()
-          .eq('status', 'active')
+          .eq('is_active', true)
           .order('name', ascending: true);
 
       final clubs = response.map<Club>((data) {
@@ -147,7 +99,33 @@ class HomeService {
           'id': data['id'],
           'name': data['name'],
           'description': data['description'],
-          'logoUrl': data['featured_image'],
+          'logoUrl': data['logo_url'],
+          'createdAt': data['created_at'],
+        });
+      }).toList();
+
+      return Right(clubs);
+    } catch (e) {
+      return Left(AppFailure.serverFailure(e.toString()));
+    }
+  }
+
+  /// Clubs created by [ownerId] - used for the event-creation venue picker so an
+  /// organizer can only publish events under their own venues, not anyone else's.
+  Future<Either<AppFailure, List<Club>>> getClubsByOwner(String ownerId) async {
+    try {
+      final response = await _supabase
+          .from('clubs')
+          .select()
+          .eq('created_by', ownerId)
+          .order('name', ascending: true);
+
+      final clubs = response.map<Club>((data) {
+        return Club.fromJson({
+          'id': data['id'],
+          'name': data['name'],
+          'description': data['description'],
+          'logoUrl': data['logo_url'],
           'createdAt': data['created_at'],
         });
       }).toList();
@@ -163,33 +141,10 @@ class HomeService {
       final response = await _supabase
           .from('events')
           .select()
-          .eq('venue_id', clubId)
-          .order('event_date', ascending: true);
+          .eq('club_id', clubId)
+          .order('start_date', ascending: true);
 
-      final events = response.map<Event>((data) {
-        return Event.fromJson({
-          'id': data['id'],
-          'title': data['title'],
-          'description': data['description'],
-          'coverImage': data['featured_image'],
-          'startDate': data['event_date'],
-          'endDate': data['end_date'] ?? data['event_date'],
-          'venueId': data['venue_id'],
-          'category': data['category'],
-          'eventType': data['event_type'],
-          'capacity': data['capacity'],
-          'price': (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
-          'vipPrice': (data['vip_price'] as num?)?.toDouble(),
-          'earlyBirdPrice': (data['early_bird_price'] as num?)?.toDouble(),
-          'status': data['status'] ?? 'draft',
-          'featuredImage': data['featured_image'],
-          'images': (data['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
-          'organizerId': data['organizer_id'],
-          'createdAt': data['created_at'],
-          'updatedAt': data['updated_at'],
-          'createdBy': data['organizer_id'],
-        });
-      }).toList();
+      final events = response.map<Event>(_mapEvent).toList();
 
       return Right(events);
     } catch (e) {
@@ -203,34 +158,11 @@ class HomeService {
       final response = await _supabase
           .from('events')
           .select()
-          .gte('event_date', now)
-          .order('event_date', ascending: true)
+          .gte('start_date', now)
+          .order('start_date', ascending: true)
           .limit(10);
 
-      final events = response.map<Event>((data) {
-        return Event.fromJson({
-          'id': data['id'],
-          'title': data['title'],
-          'description': data['description'],
-          'coverImage': data['featured_image'],
-          'startDate': data['event_date'],
-          'endDate': data['end_date'] ?? data['event_date'],
-          'venueId': data['venue_id'],
-          'category': data['category'],
-          'eventType': data['event_type'],
-          'capacity': data['capacity'],
-          'price': (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
-          'vipPrice': (data['vip_price'] as num?)?.toDouble(),
-          'earlyBirdPrice': (data['early_bird_price'] as num?)?.toDouble(),
-          'status': data['status'] ?? 'draft',
-          'featuredImage': data['featured_image'],
-          'images': (data['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
-          'organizerId': data['organizer_id'],
-          'createdAt': data['created_at'],
-          'updatedAt': data['updated_at'],
-          'createdBy': data['organizer_id'],
-        });
-      }).toList();
+      final events = response.map<Event>(_mapEvent).toList();
 
       return Right(events);
     } catch (e) {
@@ -241,7 +173,7 @@ class HomeService {
   Future<Either<AppFailure, Club?>> getClubById(String clubId) async {
     try {
       final response = await _supabase
-          .from('venues')
+          .from('clubs')
           .select()
           .eq('id', clubId)
           .maybeSingle();
@@ -254,7 +186,7 @@ class HomeService {
         'id': response['id'],
         'name': response['name'],
         'description': response['description'],
-        'logoUrl': response['featured_image'],
+        'logoUrl': response['logo_url'],
         'createdAt': response['created_at'],
       });
 
@@ -274,34 +206,7 @@ class HomeService {
       if (response == null) {
         return const Right(null);
       }
-      final event = Event.fromJson({
-        'id': response['id'],
-        'title': response['title'],
-        'description': response['description'],
-        'coverImage': response['featured_image'],
-        'startDate': response['event_date'],
-        'endDate': response['end_date'] ?? response['event_date'],
-        'venueId': response['venue_id'],
-        'category': response['category'],
-        'eventType': response['event_type'],
-        'capacity': response['capacity'],
-        'price': (response['price'] is num)
-            ? (response['price'] as num).toDouble()
-            : 0.0,
-        'vipPrice': (response['vip_price'] as num?)?.toDouble(),
-        'earlyBirdPrice': (response['early_bird_price'] as num?)?.toDouble(),
-        'status': response['status'] ?? 'draft',
-        'featuredImage': response['featured_image'],
-        'images': (response['images'] as List?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [],
-        'organizerId': response['organizer_id'],
-        'createdAt': response['created_at'],
-        'updatedAt': response['updated_at'],
-        'createdBy': response['organizer_id'],
-      });
-      return Right(event);
+      return Right(_mapEvent(response));
     } catch (e) {
       return Left(AppFailure.serverFailure(e.toString()));
     }
@@ -315,39 +220,32 @@ class HomeService {
     required DateTime startDate,
     required DateTime endDate,
     String? coverImage,
-    String? createdBy,
   }) async {
     try {
+      // created_by always comes from the authenticated session, never a
+      // caller-supplied value, so an event can't be published under someone
+      // else's organizer ID. RLS also enforces created_by = auth.uid() on insert.
+      final createdBy = _supabase.auth.currentUser?.id;
+      if (createdBy == null) {
+        return Left(AppFailure.authFailure('You must be logged in to create events'));
+      }
+
       final response = await _supabase
           .from('events')
           .insert({
             'title': title,
             'description': description,
             'location': location,
-            'venue_id': clubId,
-            'event_date': startDate.toIso8601String(),
+            'club_id': clubId,
+            'start_date': startDate.toIso8601String(),
             'end_date': endDate.toIso8601String(),
-            'featured_image': coverImage,
-            'organizer_id': createdBy,
+            'cover_image': coverImage,
+            'created_by': createdBy,
           })
           .select()
           .single();
 
-      final event = Event.fromJson({
-        'id': response['id'],
-        'title': response['title'],
-        'description': response['description'],
-        'coverImage': response['featured_image'],
-        'startDate': response['event_date'],
-        'endDate': response['end_date'],
-        'venueId': response['venue_id'],
-        'featuredImage': response['featured_image'],
-        'organizerId': response['organizer_id'],
-        'createdAt': response['created_at'],
-        'createdBy': response['organizer_id'],
-      });
-
-      return Right(event);
+      return Right(_mapEvent(response));
     } catch (e) {
       return Left(AppFailure.serverFailure(e.toString()));
     }
@@ -366,8 +264,7 @@ class HomeService {
           schema: 'public',
           table: 'events',
           callback: (payload) {
-            final event = _mapEventFromPayload(payload.newRecord);
-            onInsert(event);
+            onInsert(_mapEvent(payload.newRecord));
           },
         )
         .onPostgresChanges(
@@ -375,8 +272,7 @@ class HomeService {
           schema: 'public',
           table: 'events',
           callback: (payload) {
-            final event = _mapEventFromPayload(payload.newRecord);
-            onUpdate(event);
+            onUpdate(_mapEvent(payload.newRecord));
           },
         )
         .onPostgresChanges(
@@ -408,12 +304,11 @@ class HomeService {
           table: 'events',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'organizer_id',
+            column: 'created_by',
             value: organizerId,
           ),
           callback: (payload) {
-            final event = _mapEventFromPayload(payload.newRecord);
-            onInsert(event);
+            onInsert(_mapEvent(payload.newRecord));
           },
         )
         .onPostgresChanges(
@@ -422,12 +317,11 @@ class HomeService {
           table: 'events',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'organizer_id',
+            column: 'created_by',
             value: organizerId,
           ),
           callback: (payload) {
-            final event = _mapEventFromPayload(payload.newRecord);
-            onUpdate(event);
+            onUpdate(_mapEvent(payload.newRecord));
           },
         )
         .onPostgresChanges(
@@ -436,7 +330,7 @@ class HomeService {
           table: 'events',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'organizer_id',
+            column: 'created_by',
             value: organizerId,
           ),
           callback: (payload) {
@@ -448,30 +342,4 @@ class HomeService {
 
     return channel;
   }
-
-  /// Helper method to map event from realtime payload
-  Event _mapEventFromPayload(Map<String, dynamic> data) {
-    return Event.fromJson({
-      'id': data['id'],
-      'title': data['title'],
-      'description': data['description'],
-      'coverImage': data['featured_image'],
-      'startDate': data['event_date'],
-      'endDate': data['end_date'] ?? data['event_date'],
-      'venueId': data['venue_id'],
-      'category': data['category'],
-      'eventType': data['event_type'],
-      'capacity': data['capacity'],
-      'price': (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
-      'vipPrice': (data['vip_price'] as num?)?.toDouble(),
-      'earlyBirdPrice': (data['early_bird_price'] as num?)?.toDouble(),
-      'status': data['status'] ?? 'draft',
-      'featuredImage': data['featured_image'],
-      'images': (data['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      'organizerId': data['organizer_id'],
-      'createdAt': data['created_at'],
-      'updatedAt': data['updated_at'],
-      'createdBy': data['organizer_id'],
-    });
-  }
-} 
+}

@@ -255,6 +255,11 @@ class ProfileScreen extends ConsumerWidget {
                         // Navigate to events tab
                       },
                     ),
+                    _buildActionItem(
+                      icon: Icons.storefront_outlined,
+                      label: 'My Venues',
+                      onTap: () => context.push('/my-venues'),
+                    ),
                   ],
                   _buildActionItem(
                     icon: Icons.settings_outlined,

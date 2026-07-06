@@ -56,6 +56,40 @@ class StorageService {
     }
   }
 
+  /// Upload a venue image. Reuses the event-images bucket (no dedicated
+  /// venue-images bucket exists) - it already grants authenticated uploads.
+  static Future<Either<AppFailure, String>> uploadVenueImage(XFile imageFile) async {
+    try {
+      final String fileName = 'venue_${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
+      final Uint8List imageBytes = await imageFile.readAsBytes();
+
+      await _supabase.storage
+          .from(_eventImagesBucket)
+          .uploadBinary(fileName, imageBytes);
+
+      final String publicUrl = _supabase.storage
+          .from(_eventImagesBucket)
+          .getPublicUrl(fileName);
+
+      return Right(publicUrl);
+    } catch (e) {
+      return Left(AppFailure.serverFailure('Failed to upload image: $e'));
+    }
+  }
+
+  /// Pick and upload a venue image (combines pick and upload)
+  static Future<Either<AppFailure, String>> pickAndUploadVenueImage() async {
+    try {
+      final imageResult = await pickImageFromGallery();
+      return imageResult.fold(
+        (failure) => Left(failure),
+        (imageFile) => uploadVenueImage(imageFile),
+      );
+    } catch (e) {
+      return Left(AppFailure.unknownFailure('Failed to process image: $e'));
+    }
+  }
+
   /// Upload image and return URL (combines pick and upload)
   static Future<Either<AppFailure, String>> pickAndUploadEventImage() async {
     try {

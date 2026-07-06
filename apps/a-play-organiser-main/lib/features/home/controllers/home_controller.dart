@@ -58,6 +58,17 @@ final clubsProvider = FutureProvider<List<Club>>((ref) async {
   );
 });
 
+// Venues owned by the given organizer - used for the event-creation venue
+// picker so an organizer can only publish events under their own venues.
+final myClubsProvider = FutureProvider.family<List<Club>, String>((ref, ownerId) async {
+  final homeService = ref.watch(homeServiceProvider);
+  final result = await homeService.getClubsByOwner(ownerId);
+  return result.fold(
+    (failure) => throw Exception(failure.toString()),
+    (clubs) => clubs,
+  );
+});
+
 final clubByIdProvider = FutureProvider.family<Club?, String>((ref, clubId) async {
   final homeService = ref.watch(homeServiceProvider);
   final result = await homeService.getClubById(clubId);
