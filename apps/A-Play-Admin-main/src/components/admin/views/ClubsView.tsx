@@ -27,6 +27,7 @@ export function ClubsView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingClub, setEditingClub] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [filter, setFilter] = useState<"all" | "pending">("all");
   const queryClient = useQueryClient();
 
   const toggleActiveMutation = useMutation({
@@ -82,6 +83,10 @@ export function ClubsView() {
     },
   });
 
+  const isPendingSubmission = (club: any) => Boolean(club.created_by) && club.is_active === false;
+  const pendingCount = clubs?.filter(isPendingSubmission).length || 0;
+  const visibleClubs = filter === "pending" ? clubs?.filter(isPendingSubmission) : clubs;
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -114,7 +119,7 @@ export function ClubsView() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-xl font-bold">Clubs</h1>
-          <p className="text-sm text-muted-foreground">{clubs?.length || 0} clubs</p>
+          <p className="text-sm text-muted-foreground">{visibleClubs?.length || 0} clubs</p>
         </div>
         <Button size="sm" className="gap-1" onClick={() => setShowCreateForm(true)}>
           <Plus className="h-4 w-4" />
@@ -132,16 +137,51 @@ export function ClubsView() {
         />
       </div>
 
+      <div className="flex gap-2">
+        <Button
+          variant={filter === "all" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("all")}
+        >
+          All Clubs
+        </Button>
+        <Button
+          variant={filter === "pending" ? "default" : "outline"}
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setFilter("pending")}
+        >
+          Pending Requests
+          {pendingCount > 0 && (
+            <Badge variant="secondary" className="h-5 min-w-5 px-1 bg-orange-500 text-white">
+              {pendingCount}
+            </Badge>
+          )}
+        </Button>
+      </div>
+
       <div className="space-y-2">
-        {clubs?.map((club) => (
-          <div key={club.id} className="flex items-center gap-3 p-3 border rounded-lg bg-background">
+        {visibleClubs?.map((club) => {
+          const isPending = isPendingSubmission(club);
+          return (
+          <div
+            key={club.id}
+            className={`flex items-center gap-3 p-3 border rounded-lg bg-background ${isPending ? "border-orange-500/50 bg-orange-500/5" : ""}`}
+          >
             <img
               src={club.logo_url || "https://images.unsplash.com/photo-1563841930606-67e2bce48b78?auto=format&fit=crop&w=200&h=200&q=80"}
               alt={club.name}
               className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-sm truncate">{club.name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-sm truncate">{club.name}</h3>
+                {isPending && (
+                  <Badge variant="secondary" className="bg-orange-500 text-white text-[10px] px-1.5 py-0">
+                    Organizer Request
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground truncate">
                 {club.description || "No description"}
               </p>
@@ -165,7 +205,7 @@ export function ClubsView() {
                 onClick={() => toggleActiveMutation.mutate({ clubId: club.id, isActive: (club as any).is_active !== false })}
                 disabled={toggleActiveMutation.isPending}
               >
-                {(club as any).is_active === false ? "Hidden" : "Visible"}
+                {(club as any).is_active === false ? (isPending ? "Approve" : "Hidden") : "Visible"}
               </Button>
               <ClubTablesDialog club={{ id: club.id, name: club.name }}>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Manage tables">
@@ -207,15 +247,22 @@ export function ClubsView() {
               </AlertDialog>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
-      {clubs?.length === 0 && (
+      {visibleClubs?.length === 0 && (
         <div className="text-center py-8">
           <Building2 className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-          <h3 className="text-sm font-medium mb-1">No clubs found</h3>
+          <h3 className="text-sm font-medium mb-1">
+            {filter === "pending" ? "No pending requests" : "No clubs found"}
+          </h3>
           <p className="text-xs text-muted-foreground mb-3">
-            {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first club"}
+            {filter === "pending"
+              ? "New organizer venue submissions will show up here."
+              : searchTerm
+                ? "Try adjusting your search terms"
+                : "Get started by adding your first club"}
           </p>
           <Button size="sm" className="gap-1" onClick={() => setShowCreateForm(true)}>
             <Plus className="h-4 w-4" />

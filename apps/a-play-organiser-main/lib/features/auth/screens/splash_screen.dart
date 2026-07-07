@@ -79,16 +79,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         initial: () {},
         loading: () {},
         authenticated: (user) {
-          _pendingRoute = '/home';
-          _checkNavigation();
+          if (_isVideoFinished && mounted) {
+            // Navigate immediately if video is already finished
+            context.go('/home');
+          } else {
+            // Store route to navigate after video finishes
+            _pendingRoute = '/home';
+          }
         },
         unauthenticated: () {
-          _pendingRoute = '/login';
-          _checkNavigation();
+          if (_isVideoFinished && mounted) {
+            // Navigate immediately if video is already finished
+            context.go('/login');
+          } else {
+            // Store route to navigate after video finishes
+            _pendingRoute = '/login';
+          }
         },
         error: (message) {
-          _pendingRoute = '/login';
-          _checkNavigation();
+          if (_isVideoFinished && mounted) {
+            // Navigate immediately if video is already finished
+            context.go('/login');
+          } else {
+            // Store route to navigate after video finishes
+            _pendingRoute = '/login';
+          }
         },
       );
     });

@@ -38,6 +38,7 @@ dependencies:
   
   # Utilities
   intl: 0.19.0
+  http: 1.2.2
   
   # Charts & Animations
   fl_chart: 1.1.1

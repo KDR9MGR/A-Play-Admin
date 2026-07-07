@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../controllers/home_controller.dart';
+import '../../venue/providers/venue_provider.dart';
 import 'events_list_screen.dart';
 import 'profile_screen.dart';
 import 'dashboard_screen.dart';
@@ -21,6 +24,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   late NotchBottomBarController _controller;
   late PageController _pageController;
   int _currentIndex = 0;
+  RealtimeChannel? _venueApprovalChannel;
 
   final List<Widget> _screens = [
     const DashboardScreen(), // Home screen with stats
@@ -34,12 +38,54 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     super.initState();
     _controller = NotchBottomBarController(index: _currentIndex);
     _pageController = PageController(initialPage: _currentIndex);
+    _listenForVenueApprovals();
+  }
+
+  /// Notifies the organizer in-app the moment one of their pending venues is
+  /// approved (is_active flips to true), and refreshes the venue lists so
+  /// event creation unblocks immediately without needing a manual refresh.
+  void _listenForVenueApprovals() {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    _venueApprovalChannel = Supabase.instance.client
+        .channel('club_approvals_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'clubs',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'created_by',
+            value: userId,
+          ),
+          callback: (payload) {
+            final wasActive = payload.oldRecord['is_active'] == true;
+            final isActive = payload.newRecord['is_active'] == true;
+            if (!wasActive && isActive) {
+              ref.invalidate(myVenuesProvider);
+              ref.invalidate(myClubsProvider);
+              final name = payload.newRecord['name'] as String? ?? 'Your venue';
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$name has been approved! You can now create events for it.'),
+                    backgroundColor: AppTheme.successColor,
+                    duration: const Duration(seconds: 5),
+                  ),
+                );
+              }
+            }
+          },
+        )
+        .subscribe();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _pageController.dispose();
+    _venueApprovalChannel?.unsubscribe();
     super.dispose();
   }
 

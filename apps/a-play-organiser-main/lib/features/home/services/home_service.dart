@@ -110,14 +110,18 @@ class HomeService {
     }
   }
 
-  /// Clubs created by [ownerId] - used for the event-creation venue picker so an
-  /// organizer can only publish events under their own venues, not anyone else's.
+  /// Clubs created by [ownerId] that are approved (is_active) - used for the
+  /// event-creation venue picker so an organizer can only publish events
+  /// under their own, admin-approved venues. Pending submissions are
+  /// intentionally excluded here (they still show up in "My Venues" via
+  /// VenueService.getMyVenues, just not selectable for a new event yet).
   Future<Either<AppFailure, List<Club>>> getClubsByOwner(String ownerId) async {
     try {
       final response = await _supabase
           .from('clubs')
           .select()
           .eq('created_by', ownerId)
+          .eq('is_active', true)
           .order('name', ascending: true);
 
       final clubs = response.map<Club>((data) {

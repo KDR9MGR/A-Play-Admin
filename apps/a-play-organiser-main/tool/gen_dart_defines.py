@@ -54,7 +54,7 @@ def main() -> int:
         "SUPABASE_URL",
         "SUPABASE_ANON_KEY",
         "PASSWORD_RESET_REDIRECT_URL",
-        "EVENT_IMAGES_BUCKET",
+        "GOOGLE_MAPS_API_KEY",
         "PRIVACY_EMAIL",
         "LEGAL_EMAIL",
         "SUPPORT_EMAIL",

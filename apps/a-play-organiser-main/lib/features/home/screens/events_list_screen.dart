@@ -104,6 +104,16 @@ class _EventsListScreenState extends ConsumerState<EventsListScreen> {
         actions: [
           if (user.isOrganizer)
             IconButton(
+              onPressed: () => context.push('/my-venues'),
+              icon: const Icon(
+                Icons.storefront_outlined,
+                color: AppTheme.textPrimary,
+                size: 24,
+              ),
+              tooltip: 'My Venues',
+            ),
+          if (user.isOrganizer)
+            IconButton(
               onPressed: () => context.push('/create-event'),
               icon: Icon(
                 Icons.add_rounded,

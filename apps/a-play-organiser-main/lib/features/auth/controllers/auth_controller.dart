@@ -4,6 +4,8 @@ import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../../../core/utils/app_failure.dart';
 import '../../../core/utils/error_message_mapper.dart';
+import '../../home/controllers/home_controller.dart';
+import '../../venue/providers/venue_provider.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
@@ -114,13 +116,34 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> signOut() async {
     state = const AuthState.loading();
-    
+
     final result = await _authService.signOut();
-    
+
     result.fold(
       (failure) => state = AuthState.error(_failureMessage(failure)),
-      (_) => state = const AuthState.unauthenticated(),
+      (_) {
+        state = const AuthState.unauthenticated();
+        _invalidateUserScopedProviders();
+      },
     );
+  }
+
+  /// Drop every cached per-organizer provider so no previous account's
+  /// events/venues/revenue data can leak into the next session on this
+  /// device (e.g. signing out and signing in as a different organizer).
+  void _invalidateUserScopedProviders() {
+    _ref.invalidate(homeControllerProvider);
+    _ref.invalidate(clubsProvider);
+    _ref.invalidate(clubByIdProvider);
+    _ref.invalidate(myClubsProvider);
+    _ref.invalidate(eventByIdProvider);
+    _ref.invalidate(eventsByUserProvider);
+    _ref.invalidate(upcomingEventsByUserProvider);
+    _ref.invalidate(upcomingEventsProvider);
+    _ref.invalidate(organizerRevenueProvider);
+    _ref.invalidate(userStatsProvider);
+    _ref.invalidate(organizerTransactionsProvider);
+    _ref.invalidate(myVenuesProvider);
   }
 
   Future<void> refreshUser() async {

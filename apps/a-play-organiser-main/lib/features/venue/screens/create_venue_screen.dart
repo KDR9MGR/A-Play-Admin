@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/widgets/location_autocomplete_field.dart';
 import '../../home/widgets/image_picker_widget.dart';
 import '../providers/venue_provider.dart';
 import '../models/venue.dart';
@@ -175,10 +176,10 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
             const SizedBox(height: 16),
             _buildTypeSelector(),
             const SizedBox(height: 16),
-            _buildTextField(
+            LocationAutocompleteField(
               controller: _addressController,
               label: 'Address *',
-              hint: 'Street, city',
+              hint: 'Search for an address...',
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter an address';

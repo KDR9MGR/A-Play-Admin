@@ -1,14 +1,16 @@
-import 'dart:typed_data';
 import 'package:fpdart/fpdart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../config/supabase_config.dart';
 import '../utils/app_failure.dart';
 
+/// All vendor (organiser) uploads go through the single shared 'media'
+/// bucket, labeled by folder so RLS can validate ownership from the uid
+/// embedded in the path (see supabase/migrations/20260706_create_media_bucket.sql
+/// in the user app repo): flyers/{uid}/..., clubs/{uid}/..., venues/{uid}/...
 class StorageService {
   static final _supabase = Supabase.instance.client;
-  static const String _eventImagesBucket = SupabaseConfig.eventImagesBucket;
+  static const String _mediaBucket = 'media';
 
   /// Pick image from gallery
   static Future<Either<AppFailure, XFile>> pickImageFromGallery() async {
@@ -31,24 +33,26 @@ class StorageService {
     }
   }
 
-  /// Upload image to Supabase storage
-  static Future<Either<AppFailure, String>> uploadEventImage(XFile imageFile) async {
+  /// Upload a file into the media bucket under `{label}/{uid}/{filename}`.
+  /// `label` identifies what the media is for (flyers, clubs, venues, ...)
+  /// so the same bucket can serve multiple features while staying easy to
+  /// audit and while RLS can still validate the uid segment of the path.
+  static Future<Either<AppFailure, String>> _uploadLabeled({
+    required String label,
+    required XFile imageFile,
+  }) async {
     try {
-      // Generate unique filename
-      final String fileName = 'event_${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
-      
-      // Read image file as bytes
-      final Uint8List imageBytes = await imageFile.readAsBytes();
-      
-      // Upload to Supabase storage
-      await _supabase.storage
-          .from(_eventImagesBucket)
-          .uploadBinary(fileName, imageBytes);
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        return Left(AppFailure.authFailure('You must be logged in to upload media'));
+      }
 
-      // Get public URL
-      final String publicUrl = _supabase.storage
-          .from(_eventImagesBucket)
-          .getPublicUrl(fileName);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
+      final path = '$label/$userId/$fileName';
+      final imageBytes = await imageFile.readAsBytes();
+
+      await _supabase.storage.from(_mediaBucket).uploadBinary(path, imageBytes);
+      final publicUrl = _supabase.storage.from(_mediaBucket).getPublicUrl(path);
 
       return Right(publicUrl);
     } catch (e) {
@@ -56,25 +60,14 @@ class StorageService {
     }
   }
 
-  /// Upload a venue image. Reuses the event-images bucket (no dedicated
-  /// venue-images bucket exists) - it already grants authenticated uploads.
-  static Future<Either<AppFailure, String>> uploadVenueImage(XFile imageFile) async {
-    try {
-      final String fileName = 'venue_${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
-      final Uint8List imageBytes = await imageFile.readAsBytes();
+  /// Upload an event flyer/cover image
+  static Future<Either<AppFailure, String>> uploadEventImage(XFile imageFile) {
+    return _uploadLabeled(label: 'flyers', imageFile: imageFile);
+  }
 
-      await _supabase.storage
-          .from(_eventImagesBucket)
-          .uploadBinary(fileName, imageBytes);
-
-      final String publicUrl = _supabase.storage
-          .from(_eventImagesBucket)
-          .getPublicUrl(fileName);
-
-      return Right(publicUrl);
-    } catch (e) {
-      return Left(AppFailure.serverFailure('Failed to upload image: $e'));
-    }
+  /// Upload a venue/club cover image
+  static Future<Either<AppFailure, String>> uploadVenueImage(XFile imageFile) {
+    return _uploadLabeled(label: 'clubs', imageFile: imageFile);
   }
 
   /// Pick and upload a venue image (combines pick and upload)
@@ -90,38 +83,35 @@ class StorageService {
     }
   }
 
-  /// Upload image and return URL (combines pick and upload)
+  /// Pick and upload an event flyer/cover image (combines pick and upload)
   static Future<Either<AppFailure, String>> pickAndUploadEventImage() async {
     try {
-      // Pick image from gallery
       final imageResult = await pickImageFromGallery();
       return imageResult.fold(
         (failure) => Left(failure),
-        (imageFile) async {
-          // Upload to storage
-          final uploadResult = await uploadEventImage(imageFile);
-          return uploadResult;
-        },
+        (imageFile) => uploadEventImage(imageFile),
       );
     } catch (e) {
       return Left(AppFailure.unknownFailure('Failed to process image: $e'));
     }
   }
 
-  /// Delete image from storage
+  /// Delete an uploaded image given its public URL
   static Future<Either<AppFailure, void>> deleteEventImage(String imageUrl) async {
     try {
-      // Extract filename from URL
       final uri = Uri.parse(imageUrl);
-      final fileName = uri.pathSegments.last;
+      final marker = '/object/public/$_mediaBucket/';
+      final markerIndex = uri.path.indexOf(marker);
+      if (markerIndex == -1) {
+        return Left(AppFailure.unknownFailure('Not a recognized media URL'));
+      }
+      final path = uri.path.substring(markerIndex + marker.length);
 
-      await _supabase.storage
-          .from(_eventImagesBucket)
-          .remove([fileName]);
+      await _supabase.storage.from(_mediaBucket).remove([path]);
 
       return const Right(null);
     } catch (e) {
       return Left(AppFailure.serverFailure('Failed to delete image: $e'));
     }
   }
-} 
+}

@@ -8,6 +8,8 @@ import '../models/event.dart';
 import '../widgets/image_picker_widget.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/location_autocomplete_field.dart';
+import '../../venue/providers/venue_provider.dart';
 
 class CreateEventScreen extends ConsumerStatefulWidget {
   final String? eventId;
@@ -102,6 +104,15 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         ? ref.watch(myClubsProvider(userId))
         : const AsyncValue<List<Club>>.data([]);
 
+    // A venue is mandatory before creating a new event - block the form
+    // entirely. Distinguish "no venue at all yet" from "submitted, still
+    // waiting on admin approval" so the message actually matches reality.
+    if (!_isEditing && clubs.hasValue && clubs.value!.isEmpty) {
+      final allVenues = ref.watch(myVenuesProvider);
+      final hasPendingVenue = allVenues.hasValue && allVenues.value!.isNotEmpty;
+      return _buildVenueRequiredScreen(isPending: hasPendingVenue);
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundDark,
       appBar: AppBar(
@@ -177,10 +188,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               ),
               const SizedBox(height: 16),
               
-              _buildTextField(
+              LocationAutocompleteField(
                 controller: _locationController,
                 label: 'Location *',
-                hint: 'Event location',
+                hint: 'Search for an address...',
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter event location';
@@ -189,8 +200,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              
-              // Club/Venue (Optional)
+
+              // Club/Venue (required)
               clubs.when(
                 data: (clubsList) => _buildClubDropdown(clubsList),
                 loading: () => _buildLoadingDropdown(),
@@ -303,6 +314,86 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
+  /// Shown instead of the event form when the organizer has no approved
+  /// venue yet - a venue is mandatory before an event can be created.
+  /// [isPending] distinguishes "already submitted, waiting on admin" from
+  /// "haven't created one at all" so the message matches reality.
+  Widget _buildVenueRequiredScreen({required bool isPending}) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundDark,
+      appBar: AppBar(
+        backgroundColor: AppTheme.backgroundDark,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          'Create Event',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: AppTheme.textPrimary),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isPending ? Icons.hourglass_top_outlined : Icons.storefront_outlined,
+                size: 64,
+                color: AppTheme.textSecondary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isPending ? 'Venue pending approval' : 'You need a venue first',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isPending
+                    ? 'Your venue is still awaiting admin approval. Once it’s '
+                        'approved you’ll be able to create events for it right away.'
+                    : 'Every event has to be linked to a club, pub, or restaurant you own. '
+                        'Create a venue to continue.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => context.push(isPending ? '/my-venues' : '/create-venue'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryOrange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    isPending ? 'View My Venues' : 'Create a Venue',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -360,7 +451,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Club/Venue (Optional)',
+          'Club/Venue *',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -404,6 +495,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               _selectedClubId = value;
             });
           },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please select a club or venue';
+            }
+            return null;
+          },
         ),
       ],
     );
@@ -414,7 +511,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Club/Venue (Optional)',
+          'Club/Venue *',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -448,7 +545,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Club/Venue (Optional)',
+          'Club/Venue *',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
