@@ -1,5 +1,7 @@
 {
-  "root": "apps/A-Play-Admin-main",
+  "buildCommand": "cd apps/A-Play-Admin-main && npm install && npm run build",
+  "outputDirectory": "apps/A-Play-Admin-main/dist",
+  "installCommand": "echo 'skip root install, handled in buildCommand'",
   "rewrites": [
     {
       "source": "/(.*)",

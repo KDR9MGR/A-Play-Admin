@@ -1591,12 +1591,266 @@ export type Database = {
           },
         ]
       }
+      affiliates: {
+        Row: {
+          id: string
+          business_name: string
+          category: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contact_email: string | null
+          address: string | null
+          point_value_ghs: number | null
+          is_active: boolean
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_name: string
+          category?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_email?: string | null
+          address?: string | null
+          point_value_ghs?: number | null
+          is_active?: boolean
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          business_name?: string
+          category?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_email?: string | null
+          address?: string | null
+          point_value_ghs?: number | null
+          is_active?: boolean
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      points_settings: {
+        Row: {
+          id: boolean
+          default_point_value_ghs: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          default_point_value_ghs?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          default_point_value_ghs?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_settlements: {
+        Row: {
+          id: string
+          affiliate_id: string
+          total_points: number
+          total_value_ghs: number
+          status: string
+          paid_at: string | null
+          paid_by: string | null
+          payout_reference: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          affiliate_id: string
+          total_points: number
+          total_value_ghs: number
+          status?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_reference?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          affiliate_id?: string
+          total_points?: number
+          total_value_ghs?: number
+          status?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_reference?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_settlements_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      point_redemptions: {
+        Row: {
+          id: string
+          user_id: string
+          points_spent: number
+          reward_type: string
+          reward_value: number | null
+          description: string | null
+          status: string
+          created_at: string
+          expires_at: string | null
+          redemption_code: string | null
+          affiliate_id: string | null
+          settlement_id: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          points_spent: number
+          reward_type: string
+          reward_value?: number | null
+          description?: string | null
+          status?: string
+          created_at?: string
+          expires_at?: string | null
+          redemption_code?: string | null
+          affiliate_id?: string | null
+          settlement_id?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          points_spent?: number
+          reward_type?: string
+          reward_value?: number | null
+          description?: string | null
+          status?: string
+          created_at?: string
+          expires_at?: string | null
+          redemption_code?: string | null
+          affiliate_id?: string | null
+          settlement_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "point_redemptions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "point_redemptions_settlement_fk"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_points: {
+        Row: {
+          id: string
+          user_id: string
+          total_points: number
+          available_points: number
+          used_points: number
+          last_updated: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          total_points?: number
+          available_points?: number
+          used_points?: number
+          last_updated?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          total_points?: number
+          available_points?: number
+          used_points?: number
+          last_updated?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_adjust_user_points: {
+        Args: {
+          p_user_id: string
+          p_points: number
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      create_affiliate_settlement: {
+        Args: {
+          p_affiliate_id: string
+        }
+        Returns: {
+          id: string
+          affiliate_id: string
+          total_points: number
+          total_value_ghs: number
+          status: string
+          paid_at: string | null
+          paid_by: string | null
+          payout_reference: string | null
+          created_by: string | null
+          created_at: string
+        }
+      }
+      mark_settlement_paid: {
+        Args: {
+          p_settlement_id: string
+          p_payout_reference: string
+        }
+        Returns: undefined
+      }
+      redeem_points_at_affiliate: {
+        Args: {
+          p_affiliate_id: string
+          p_points: number
+        }
+        Returns: {
+          id: string
+          user_id: string
+          points_spent: number
+          reward_type: string
+          reward_value: number | null
+          description: string | null
+          status: string
+          created_at: string
+          expires_at: string | null
+          redemption_code: string | null
+          affiliate_id: string | null
+          settlement_id: string | null
+        }
+      }
     }
     Enums: {
       order_status: "pending" | "confirmed" | "preparing" | "ready" | "delivered" | "cancelled"

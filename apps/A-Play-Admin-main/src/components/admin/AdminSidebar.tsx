@@ -21,6 +21,9 @@ import {
   Utensils,
   ShoppingCart,
   Eye,
+  Store,
+  Receipt,
+  Coins,
 } from "lucide-react";
 import {
   Sidebar,
@@ -111,6 +114,9 @@ export function AdminSidebar({ activeView, setActiveView }: AdminSidebarProps) {
         { id: "orders", label: "Orders", icon: ShoppingCart },
         { id: "categories", label: "Categories", icon: Tags },
         { id: "points", label: "Points System", icon: Trophy, disabled: true, badge: "Soon" },
+        { id: "affiliates", label: "Affiliates", icon: Store },
+        { id: "settlements", label: "Settlements", icon: Receipt },
+        { id: "points-admin", label: "Points Admin", icon: Coins },
         { id: "subscriptions", label: "Subscriptions", icon: Crown, badge: "Pro" },
         { id: "concierge", label: "Concierge", icon: Gift },
         { id: "podcast", label: "Podcast", icon: Mic },

@@ -19,6 +19,9 @@ import { BeachesView } from "./views/BeachesView";
 import { LiveShowsView } from "./views/LiveShowsView";
 import { CategoriesView } from "./views/CategoriesView";
 import { RestaurantsView } from "./views/RestaurantsView";
+import { AffiliatesView } from "./views/AffiliatesView";
+import { SettlementsView } from "./views/SettlementsView";
+import { PointsAdminView } from "./views/PointsAdminView";
 
 interface AdminContentProps {
   activeView: string;
@@ -57,6 +60,12 @@ export function AdminContent({ activeView }: AdminContentProps) {
         return <CategoriesView />;
       case "points":
         return <PointsView />;
+      case "affiliates":
+        return <AffiliatesView />;
+      case "settlements":
+        return <SettlementsView />;
+      case "points-admin":
+        return <PointsAdminView />;
       case "subscriptions":
         return <SubscriptionsView />;
       case "concierge":
